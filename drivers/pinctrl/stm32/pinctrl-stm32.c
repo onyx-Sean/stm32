@@ -91,6 +91,9 @@ struct stm32_pinctrl {
 
 static inline int stm32_gpio_pin(int gpio)
 {
+	u32 test = 0;
+	test++;
+
 	return gpio % STM32_GPIO_PINS_PER_BANK;
 }
 
