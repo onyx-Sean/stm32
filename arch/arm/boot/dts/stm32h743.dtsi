@@ -227,6 +227,19 @@
 			dma-requests = <32>;
 		};
 
+		exti: interrupt-controller@58000000 {
+			compatible = "st,stm32h7-exti";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			reg = <0x58000000 0x400>;
+			interrupts = <1>, <2>, <3>, <6>, <7>, <8>, <9>, <10>, <23>, <40>, <41>, <62>, <76>;
+		};
+
+		syscfg: system-config@58000400 {
+			compatible = "syscon";
+			reg = <0x58000400 0x400>;
+		};
+
 		lptimer2: timer@58002400 {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -304,7 +317,7 @@
 			};
 		};
 
-		vrefbuf: regulator@58003C00 {
+		vrefbuf: regulator@58003c00 {
 			compatible = "st,stm32-vrefbuf";
 			reg = <0x58003C00 0x8>;
 			clocks = <&rcc VREF_CK>;
