@@ -561,6 +561,9 @@ static void stm32_sdmmc_start_cmd(struct sdmmc_host *host,
 	dev_dbg(mmc_dev(host->mmc), "op %u arg %08x flags %08x\n",
 		cmd->opcode, cmd->arg, cmd->flags);
 
+	/* Temporary hack to fix timing issue */
+	udelay(1500);
+
 	STAT_INC(host->stat.n_req);
 
 	if (host->dpsm_abort)
