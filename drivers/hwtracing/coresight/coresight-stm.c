@@ -40,6 +40,7 @@
 #define STMHETER			0xd20
 #define STMHEBSR			0xd60
 #define STMHEMCR			0xd64
+#define STMHEEXTMUXR			0xd68
 #define STMHEMASTR			0xdf4
 #define STMHEFEAT1R			0xdf8
 #define STMHEIDR			0xdfc
@@ -125,9 +126,11 @@ struct channel_space {
  * @stmheer:		settings for register STMHEER.
  * @stmheter:		settings for register STMHETER.
  * @stmhebsr:		settings for register STMHEBSR.
+ * @stmheextmuxr:	settings for register STMHEEXTMUXR.
  */
 struct stm_drvdata {
 	void __iomem		*base;
+	void __iomem		*base_cti;
 	struct device		*dev;
 	struct clk		*atclk;
 	struct coresight_device	*csdev;
@@ -143,6 +146,7 @@ struct stm_drvdata {
 	u32			stmheer;
 	u32			stmheter;
 	u32			stmhebsr;
+	u32			stmheextmuxr;
 };
 
 static void stm_hwevent_enable_hw(struct stm_drvdata *drvdata)
@@ -152,6 +156,7 @@ static void stm_hwevent_enable_hw(struct stm_drvdata *drvdata)
 	writel_relaxed(drvdata->stmhebsr, drvdata->base + STMHEBSR);
 	writel_relaxed(drvdata->stmheter, drvdata->base + STMHETER);
 	writel_relaxed(drvdata->stmheer, drvdata->base + STMHEER);
+	writel_relaxed(drvdata->stmheextmuxr, drvdata->base + STMHEEXTMUXR);
 	writel_relaxed(0x01 |	/* Enable HW event tracing */
 		       0x04,	/* Error detection on event tracing */
 		       drvdata->base + STMHEMCR);
@@ -222,6 +227,7 @@ static void stm_hwevent_disable_hw(struct stm_drvdata *drvdata)
 	writel_relaxed(0x0, drvdata->base + STMHEMCR);
 	writel_relaxed(0x0, drvdata->base + STMHEER);
 	writel_relaxed(0x0, drvdata->base + STMHETER);
+	writel_relaxed(0x0, drvdata->base + STMHEEXTMUXR);
 
 	CS_LOCK(drvdata->base);
 }
@@ -455,6 +461,33 @@ static ssize_t notrace stm_generic_packet(struct stm_data *stm_data,
 	return size;
 }
 
+static ssize_t hwevent_extmux_select_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct stm_drvdata *drvdata = dev_get_drvdata(dev->parent);
+	unsigned long val = drvdata->stmheextmuxr;
+
+	return scnprintf(buf, PAGE_SIZE, "%#lx\n", val);
+}
+
+static ssize_t hwevent_extmux_select_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
+{
+	struct stm_drvdata *drvdata = dev_get_drvdata(dev->parent);
+	unsigned long val;
+	int ret = 0;
+
+	ret = kstrtoul(buf, 16, &val);
+	if (ret)
+		return -EINVAL;
+
+	drvdata->stmheextmuxr = val;
+
+	return size;
+}
+static DEVICE_ATTR_RW(hwevent_extmux_select);
+
 static ssize_t hwevent_enable_show(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
@@ -629,6 +662,66 @@ static ssize_t traceid_store(struct device *dev,
 }
 static DEVICE_ATTR_RW(traceid);
 
+#define CTICONTROL	0x00
+#define CTIOUTEN3	0xAC
+#define CTIOUTEN4	0xB0
+#define CTIOUTEN5	0xB4
+#define CTIOUTEN6	0xB8
+
+static ssize_t hwevent_cti_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct stm_drvdata *drvdata = dev_get_drvdata(dev->parent);
+	unsigned long val = drvdata->stmheextmuxr;
+
+	return scnprintf(buf, PAGE_SIZE, "%#lx\n", val);
+}
+
+static ssize_t hwevent_cti_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
+{
+	struct stm_drvdata *drvdata = dev_get_drvdata(dev->parent);
+	unsigned long val;
+	int ret = 0;
+	/* Generate HW evt */
+
+	printk("%s: CTI base_cti=0x%x\n", __func__, drvdata->base_cti);
+
+	val = readl_relaxed(drvdata->base_cti + 0x14);
+	printk("%s: CTI APPSET=0x%x\n", __func__, val);
+	writel_relaxed(val | 0xf, drvdata->base_cti + 0x14);
+
+
+	val = readl_relaxed(drvdata->base_cti + CTICONTROL);
+	printk("%s: CTI CTICONTROL=0x%x\n", __func__, val);
+	writel_relaxed(val | 0x1, drvdata->base_cti + CTICONTROL);
+
+/*        val = readl_relaxed(drvdata->base_cti + CTIOUTEN3);*/
+/*        printk("%s: CTI CTIOUTEN3=0x%x\n", __func__, val);*/
+/*        writel_relaxed(val | 0xf, drvdata->base_cti + CTIOUTEN3);*/
+
+/*        val = readl_relaxed(drvdata->base_cti + CTIOUTEN4);*/
+/*        printk("%s: CTI CTIOUTEN4=0x%x\n", __func__, val);*/
+/*        writel_relaxed(val | 0xf, drvdata->base_cti + CTIOUTEN4);*/
+
+
+	val = readl_relaxed(drvdata->base_cti + CTIOUTEN5);
+	printk("%s: CTI CTIOUTEN5=0x%x\n", __func__, val);
+	writel_relaxed(val | 0xf, drvdata->base_cti + CTIOUTEN5);
+
+	val = readl_relaxed(drvdata->base_cti + CTIOUTEN6);
+	printk("%s: CTI CTIOUTEN6=0x%x\n", __func__, val);
+	writel_relaxed(val | 0xf, drvdata->base_cti + CTIOUTEN6);
+
+	val = readl_relaxed(drvdata->base_cti + 0x140);
+	printk("%s: CTI GATE=0x%x\n", __func__, val);
+	writel_relaxed(val | 0xf, drvdata->base_cti + 0x140);
+
+	return size;
+}
+static DEVICE_ATTR_RW(hwevent_cti);
+
 #define coresight_stm_reg(name, offset)	\
 	coresight_simple_reg32(struct stm_drvdata, name, offset)
 
@@ -644,13 +737,20 @@ coresight_stm_reg(spfeat1r, STMSPFEAT1R);
 coresight_stm_reg(spfeat2r, STMSPFEAT2R);
 coresight_stm_reg(spfeat3r, STMSPFEAT3R);
 coresight_stm_reg(devid, CORESIGHT_DEVID);
+coresight_stm_reg(stmheer, STMHEER);
+coresight_stm_reg(stmheter, STMHETER);
+coresight_stm_reg(stmhebsr, STMHEBSR);
+coresight_stm_reg(stmheextmux, STMHEEXTMUXR);
+coresight_stm_reg(stmhemcr, STMHEMCR);
 
 static struct attribute *coresight_stm_attrs[] = {
 	&dev_attr_hwevent_enable.attr,
 	&dev_attr_hwevent_select.attr,
+	&dev_attr_hwevent_extmux_select.attr,
 	&dev_attr_port_enable.attr,
 	&dev_attr_port_select.attr,
 	&dev_attr_traceid.attr,
+	&dev_attr_hwevent_cti.attr,
 	NULL,
 };
 
@@ -667,6 +767,11 @@ static struct attribute *coresight_stm_mgmt_attrs[] = {
 	&dev_attr_spfeat2r.attr,
 	&dev_attr_spfeat3r.attr,
 	&dev_attr_devid.attr,
+	&dev_attr_stmheer.attr,
+	&dev_attr_stmheter.attr,
+	&dev_attr_stmhebsr.attr,
+	&dev_attr_stmheextmux.attr,
+	&dev_attr_stmhemcr.attr,
 	NULL,
 };
 
@@ -792,7 +897,7 @@ static int stm_probe(struct amba_device *adev, const struct amba_id *id)
 	struct coresight_platform_data *pdata = NULL;
 	struct stm_drvdata *drvdata;
 	struct resource *res = &adev->res;
-	struct resource ch_res;
+	struct resource ch_res, cti_res;
 	size_t res_size, bitmap_size;
 	struct coresight_desc desc = { 0 };
 	struct device_node *np = adev->dev.of_node;
@@ -820,6 +925,18 @@ static int stm_probe(struct amba_device *adev, const struct amba_id *id)
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 	drvdata->base = base;
+
+	ret = stm_get_resource_byname(np, "cti-base", &cti_res);
+	if (ret) {
+		return ret;
+	}
+
+	base = devm_ioremap_resource(dev, &cti_res);
+	if (IS_ERR(base)) {
+
+		return PTR_ERR(base);
+	}
+	drvdata->base_cti = base;
 
 	ret = stm_get_resource_byname(np, "stm-stimulus-base", &ch_res);
 	if (ret)
