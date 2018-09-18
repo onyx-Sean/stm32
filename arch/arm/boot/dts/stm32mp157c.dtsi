@@ -958,13 +958,11 @@
 		};
 
 		sdmmc1: sdmmc@58005000 {
-			compatible = "arm,pl18x", "arm,primecell";
-			arm,primecell-periphid = <0x10153180>;
-			reg = <0x58005000 0x1000>;
+			compatible = "st,stm32-sdmmc2";
+			reg = <0x58005000 0x1000>, <0x58006000 0x1000>;
+			reg-names = "sdmmc", "delay";
 			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names	= "cmd_irq";
 			clocks = <&rcc SDMMC1_K>;
-			clock-names = "apb_pclk";
 			resets = <&rcc SDMMC1_R>;
 			cap-sd-highspeed;
 			cap-mmc-highspeed;

@@ -7,6 +7,7 @@
 
 #include "stm32mp157c.dtsi"
 #include "stm32mp157-pinctrl.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "STMicroelectronics STM32MP157C eval daughter";
@@ -40,12 +41,33 @@
 		regulator-always-on;
 	};
 
+	vdd_sd: ldo5 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_sd";
+		regulator-min-microvolt = <2900000>;
+		regulator-max-microvolt = <2900000>;
+		regulator-boot-on;
+	};
+
 	vdd_usb: vdd-usb {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_usb";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
+	};
+
+	sd_switch: regulator-sd_switch {
+		compatible = "regulator-gpio";
+		regulator-name = "sd_switch";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <2900000>;
+		regulator-type = "voltage";
+		regulator-always-on;
+
+		gpios = <&gpiof 14 GPIO_ACTIVE_HIGH>;
+		gpios-states = <0>;
+		states = <1800000 0x1 2900000 0x0>;
 	};
 };
 
@@ -59,6 +81,25 @@
 
 &iwdg2 {
 	timeout-sec = <32>;
+	status = "okay";
+};
+
+&sdmmc1 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdmmc1_b4_pins_a &sdmmc1_dir_pins_a>;
+	pinctrl-1 = <&sdmmc1_b4_sleep_pins_a &sdmmc1_dir_sleep_pins_a>;
+	broken-cd;
+	st,dirpol;
+	st,negedge;
+	st,pin-ckin;
+	bus-width = <4>;
+	vmmc-supply = <&vdd_sd>;
+	vqmmc-supply = <&sd_switch>;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-ddr50;
+	sd-uhs-sdr104;
 	status = "okay";
 };
 
