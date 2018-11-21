@@ -2782,6 +2782,7 @@ static struct sreg pll_clock[] = {
 };
 
 static struct sreg mcu_source[] = {
+	SREG(RCC_MCUDIVR, 0, 0),
 	SREG(RCC_MSSCKSELR, 0, 0),
 };
 
