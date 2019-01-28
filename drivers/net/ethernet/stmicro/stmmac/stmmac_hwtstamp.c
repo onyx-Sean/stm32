@@ -70,6 +70,8 @@ static int init_systime(void __iomem *ioaddr, u32 sec, u32 nsec)
 	writel(nsec, ioaddr + PTP_STNSUR);
 	/* issue command to initialize the system time value */
 	value = readl(ioaddr + PTP_TCR);
+	value |= BIT(0);
+	writel(value, ioaddr + PTP_TCR);
 	value |= PTP_TCR_TSINIT;
 	writel(value, ioaddr + PTP_TCR);
 
