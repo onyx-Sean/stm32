@@ -1006,7 +1006,7 @@
 				  <&rcc ETHPTP_K>;
 
 			assigned-clocks = <&rcc ETHCK_K>;
-			assigned-clock-parents = <&rcc PLL3_Q>;
+			assigned-clock-parents = <&rcc PLL4_P>;
 
 			st,syscon = <&syscfg 0x4>;
 			snps,mixed-burst;
